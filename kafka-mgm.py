@@ -95,6 +95,7 @@ class Cluster:
         self.load_existing_topics()
 
     def create_admin_client(self):
+        #logger.debug(self.config)
         self.admin_client = AdminClient(self.config)
 
     def load_schemas_from_sr(self):
