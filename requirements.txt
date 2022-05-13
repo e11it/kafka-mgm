@@ -1,0 +1,4 @@
+confluent-kafka==1.8.2
+pyaml-env==1.1.5
+python-dotenv==0.20.0
+PyYAML==5.4.1

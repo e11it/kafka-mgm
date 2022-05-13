@@ -1,0 +1,24 @@
+---
+config:
+  bootstrap.servers: some-brokers-name.com:9093
+  security.protocol: ssl
+  ssl.ca.location: !ENV ${SSL_CA_LOCATION:ca.pem}
+  ssl.certificate.pem: !ENV ${SSL_CERTIFICATE_PEM}
+  ssl.key.pem: !ENV ${SSL_KEY_PEM}
+schema_registry:
+  url: https://schema-registry.com
+  basic.auth.user.info: !ENV ${SR_AUTH:":"}
+delete_invalid_topics: false
+validate_regexp: ^888-8(-\d{3}-\d)?\.[a-z0-9-]+\.(db|cdc|bin|cmd|sys|log|tmp)\.[a-z0-9-.]+\.\d+$
+dry_run: false
+masks_settings:
+  - mask: ^888-8(-\d{3}-\d)?\.[a-z0-9-]+\.cdc\.
+    cleanup.policy: compact
+    segment.bytes: 104857600
+    min.compaction.lag.ms: 3600000
+    delete.retention.ms: 3600000
+    segment.ms: 86400000
+  - mask: ^888-8\.ts\.
+    retention.bytes: 200000000
+    segment.bytes: 200000000
+...
