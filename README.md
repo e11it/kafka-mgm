@@ -10,6 +10,17 @@ clusters/
         topics.yml   #todo
 ```
 
+Required Kafka ACL:
+===================
+
+`${topic_prefix}` -- cluster user topic prefix
+
+```
+User:kafka_services_prod@sre-topic-config,Topic,PREFIXED,${topic_prefix},Describe,Allow,*
+User:kafka_services_prod@sre-topic-config,Topic,PREFIXED,${topic_prefix},DescribeConfigs,Allow,*
+User:kafka_services_prod@sre-topic-config,Topic,PREFIXED,${topic_prefix},AlterConfigs,Allow,*
+```
+
 DEV
 ===
 
