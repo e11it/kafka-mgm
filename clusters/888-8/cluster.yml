@@ -12,7 +12,7 @@ delete_invalid_topics: false
 validate_regexp: ^888-8(-\d{3}-\d)?\.[a-z0-9-]+\.(db|cdc|bin|cmd|sys|log|tmp)\.[a-z0-9-.]+\.\d+$
 dry_run: false
 masks_settings:
-  - mask: ^888-8(-\d{3}-\d)?\.[a-z0-9-]+\.cdc\.
+  - mask: ^\d{3}-\d(-\d{3}-\d)?\.[a-z0-9-]+\.cdc\.
     cleanup.policy: compact
     segment.bytes: 104857600
     min.compaction.lag.ms: 3600000
