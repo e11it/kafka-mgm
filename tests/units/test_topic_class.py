@@ -2,6 +2,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from tests.conftest import TEST_CONFIG
+
 
 class TestTopic:
     """Экземпляр класса Topic"""
@@ -22,7 +24,7 @@ class TestTopic:
     def test_config(self, topic):
         """Экземпляр метода config"""
 
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
+        topic.config = TEST_CONFIG
         assert list(topic.config.keys()) == ["test"]
         topic.config = {"wrong": "wrong"}
         assert list(topic.config.keys()) == ["test"]
@@ -32,7 +34,7 @@ class TestTopic:
 
         mocker.patch("kafka_mgm.Topic.merged_config", return_value={"test": "test"})
 
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
+        topic.config = TEST_CONFIG
         assert topic.need_cfg_update() is False
 
     def test_need_cfg_update_true(self, topic, mocker):
@@ -40,7 +42,7 @@ class TestTopic:
 
         mocker.patch("kafka_mgm.Topic.merged_config", return_value={"default": "default"})
 
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
+        topic.config = TEST_CONFIG
         assert topic.need_cfg_update() is True
 
     def test_custom_config(self, topic):
@@ -60,7 +62,7 @@ class TestTopic:
         """Экземпляр метода merged_config"""
 
         topic.custom_config = {"test": "test"}
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
+        topic.config = TEST_CONFIG
         assert topic.merged_config(allow_manual=True) is None
 
     def test_merged_config_exist_delta(self, topic):
@@ -73,7 +75,7 @@ class TestTopic:
         """Экземпляр метода merged_config"""
 
         topic.custom_config = {"test": "test"}
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
+        topic.config = TEST_CONFIG
         assert topic.merged_config() is None
 
     def test_merged_config_false_manual_and_exist_delta(self, topic):

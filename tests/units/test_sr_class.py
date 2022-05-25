@@ -7,7 +7,7 @@ class TestSR:
     def test_delete_topic_schemas(self, sr):
         """Экземпляр метода delete_topic_schemas"""
 
-        assert sr.subjects == [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
+        sr.subjects = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         sr.delete_topic_schemas(TEST_TOPIC_NAME)
         assert sr.subjects == []
         assert sr.admin_client.delete_subject.call_count == 2
@@ -15,7 +15,7 @@ class TestSR:
     def test_delete_topic_schemas_not_found(self, sr):
         """Экземпляр метода delete_topic_schemas"""
 
-        assert sr.subjects == [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
+        sr.subjects = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         sr.delete_topic_schemas("wrong")
         assert sr.subjects == [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         assert sr.admin_client.delete_subject.call_count == 0

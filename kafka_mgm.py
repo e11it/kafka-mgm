@@ -189,6 +189,8 @@ class Cluster:
             )
 
         empty_topics = self.topics.get_empty_topics(self.consumer)
+        if not empty_topics:
+            return
         logger.info("Delete empty topics")
         self._delete_topics(empty_topics)
         logger.info("Delete empty topics schemas")
@@ -202,6 +204,7 @@ class Cluster:
         topics = self.topics.get_valid_topics
         for topic in topics:
             resource = topic.resource_with_config()
+            print(resource)
             if resource is None:
                 continue
 
@@ -405,7 +408,7 @@ class Topics:
         for topic in obj:
             self.topics[topic] = Topic(topic)
 
-    def apply_masks(self, masks: Dict):
+    def apply_masks(self, masks: List[MaskRule]):
         for topic_name, topic in self.topics.items():
             for mask_rules in masks:
                 if mask_rules.mask.match(topic_name):

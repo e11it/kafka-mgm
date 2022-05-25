@@ -10,11 +10,12 @@ TEST_SR_SUBJECTS = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
 TEST_PARTITION_ID = 0
 TEST_MASK = r"test\."
 TEST_VERSION = "version_test"
-TEST_CONFIG = {
-    "config": "test",
+TEST_CONFIG = {"test": MagicMock(is_default=False, source=1, value="test")}
+TEST_OBJ = {
+    "config": TEST_CONFIG,
     "dry_run": False,
     "delete_invalid_topics": False,
-    "validate_regexp": r"^\d{3}-\d(-\d{3}-\d)?\.[a-z0-9-]+\.(db|cdc|bin|cmd|sys|log|tmp)\.[a-z0-9-.]+\.\d+$",
+    "validate_regexp": TEST_MASK,
 }
 
 
@@ -74,6 +75,16 @@ def topics(metadata):
 
 
 @pytest.fixture(scope="function")
+def topics_with_config(metadata):
+    """Экземпляр класса Topics"""
+
+    topics_with_config = Topics(metadata)
+    for topic in topics_with_config.topics.values():
+        topic.config = TEST_CONFIG
+    return topics_with_config
+
+
+@pytest.fixture(scope="function")
 def consumer():
     """Экземпляр класса Consumer"""
 
@@ -83,19 +94,24 @@ def consumer():
 
 
 @pytest.fixture(scope="function")
-def cluster(mocker, sr, mask_rule, metadata, consumer):
+def cluster(mocker, sr, mask_rule, metadata, consumer, topics_with_config):
     """Экземпляр класса Cluster"""
+
+    value_mock = MagicMock()
+    value_mock.result.return_value = TEST_CONFIG
+    key_mock = MagicMock()
+    key_mock.name = TEST_TOPIC_NAME
 
     admin_mock = MagicMock()
     admin_mock.list_topics.return_value = metadata
-    admin_mock.describe_configs.return_value = {"test": MagicMock(return_value={"test": "test"})}
-    admin_mock.delete_topics.return_value = {"test": MagicMock(return_value={"test": "test"})}
-    admin_mock.alter_configs.return_value = {"test": MagicMock(return_value={"test": "test"})}
+    admin_mock.describe_configs.return_value = {key_mock: value_mock}
+    admin_mock.delete_topics.return_value = {key_mock: value_mock}
+    admin_mock.alter_configs.return_value = {key_mock: value_mock}
 
     mocker.patch("kafka_mgm.Cluster.create_admin_client", return_value=admin_mock)
     mocker.patch("kafka_mgm.Cluster.create_consumer", return_value=consumer)
 
-    cluster = Cluster(TEST_CONFIG)
+    cluster = Cluster(TEST_OBJ)
     cluster.sr_client = sr
     cluster.masks.append(mask_rule)
     return cluster
