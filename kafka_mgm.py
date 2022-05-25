@@ -96,10 +96,14 @@ class Cluster:
             raise ValueError('Cluster connection "config" is required')
 
         self.config: Dict = obj["config"]
+        if self.config.get('group.id') is None:
+            self.config['group.id'] = 'group-id'
+
         self.admin_client: AdminClient = self.create_admin_client(self.config)
         self.consumer: Consumer = self.create_consumer(self.config)
         self.dry_run: bool = obj.get("dry_run", False)
         self._delete_invalid_topics: bool = obj.get("delete_invalid_topics", False)
+        self._delete_empty_topics: bool = obj.get("delete_empty_topics", False)
 
         self.sr_client: Optional[SR] = None
         if obj.get("schema_registry"):
@@ -177,6 +181,9 @@ class Cluster:
         self._delete_topics(invalid_topics)
 
     def delete_empty_topics(self):
+        if not self._delete_empty_topics:
+            return
+
         if self.consumer is None:
             raise KafkaException(
                 "Kafka consumer is not found: {}".format(self.consumer)
