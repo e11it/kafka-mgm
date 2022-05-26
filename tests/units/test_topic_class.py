@@ -3,10 +3,24 @@ from unittest.mock import MagicMock
 import pytest
 
 from tests.conftest import TEST_CONFIG
+from confluent_kafka.admin import ConfigEntry,ConfigSource
 
 
 class TestTopic:
     """Экземпляр класса Topic"""
+    _discovered_config = {
+            # Значение по дефолту
+            "compression.type": ConfigEntry("compression.type","producer",
+                                         is_default=True,source=ConfigSource.DEFAULT_CONFIG.value),
+            # Измененная настройка на брокере
+            "retention.bytes": ConfigEntry("retention.bytes","3221225472",
+                                          is_default=False,source=ConfigSource.STATIC_BROKER_CONFIG.value),
+            # Измененные значения для топика
+            "segment.bytes": ConfigEntry("segment.bytes","1073741824",
+                                         is_default=False,source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
+            "cleanup.policy": ConfigEntry("cleanup.policy","compact",
+                                          is_default=False,source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
+    }
 
     def test_resource_with_config_none(self, topic, mocker):
         """Экземпляр метода resource_with_config"""
