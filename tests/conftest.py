@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from confluent_kafka.admin import ClusterMetadata, TopicMetadata, PartitionMetadata
+from confluent_kafka.admin import ClusterMetadata, TopicMetadata, PartitionMetadata, ConfigEntry, ConfigSource
 
 from kafka_mgm import MaskRule, SR, Topic, Topics, Cluster
 
@@ -17,7 +17,19 @@ TEST_OBJ = {
     "delete_invalid_topics": False,
     "validate_regexp": TEST_MASK,
 }
-
+TEST_DEFAULT_CONFIG = {
+            # Значение по дефолту
+            "compression.type": ConfigEntry("compression.type","producer",
+                                         is_default=True,source=ConfigSource.DEFAULT_CONFIG.value),
+            # Измененная настройка на брокере
+            "retention.bytes": ConfigEntry("retention.bytes","3221225472",
+                                          is_default=False, source=ConfigSource.STATIC_BROKER_CONFIG.value),
+            # Измененные значения для топика
+            "segment.bytes": ConfigEntry("segment.bytes","1073741824",
+                                         is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
+            "cleanup.policy": ConfigEntry("cleanup.policy","compact",
+                                          is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value)
+}
 
 @pytest.fixture(scope="function")
 def mask_rule():
@@ -48,6 +60,7 @@ def topic(mocker):
     mocker.patch("kafka_mgm.Topic.resource", return_value=resource_mock)
 
     topic = Topic(TEST_TOPIC_NAME)
+    topic.config = TEST_DEFAULT_CONFIG
     return topic
 
 

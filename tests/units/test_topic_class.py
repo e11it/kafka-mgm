@@ -8,19 +8,6 @@ from confluent_kafka.admin import ConfigEntry,ConfigSource
 
 class TestTopic:
     """Экземпляр класса Topic"""
-    _discovered_config = {
-            # Значение по дефолту
-            "compression.type": ConfigEntry("compression.type","producer",
-                                         is_default=True,source=ConfigSource.DEFAULT_CONFIG.value),
-            # Измененная настройка на брокере
-            "retention.bytes": ConfigEntry("retention.bytes","3221225472",
-                                          is_default=False,source=ConfigSource.STATIC_BROKER_CONFIG.value),
-            # Измененные значения для топика
-            "segment.bytes": ConfigEntry("segment.bytes","1073741824",
-                                         is_default=False,source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
-            "cleanup.policy": ConfigEntry("cleanup.policy","compact",
-                                          is_default=False,source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
-    }
 
     def test_resource_with_config_none(self, topic, mocker):
         """Экземпляр метода resource_with_config"""
@@ -62,10 +49,10 @@ class TestTopic:
     def test_custom_config(self, topic):
         """Экземпляр метода custom_config"""
 
-        topic.custom_config = {"test": "test"}
-        assert topic.custom_config == {"test": "test"}
-        topic.custom_config = {"test2": "test2"}
-        assert topic.custom_config == {"test": "test", "test2": "test2"}
+        topic.custom_config = {"cleanup.policy": "delete"}
+        assert topic.custom_config == {"cleanup.policy": "delete"}
+        topic.custom_config = {"segment.bytes": "1024"}
+        assert topic.custom_config == {"cleanup.policy": "delete", "segment.bytes": "1024"}
 
     def test_merged_config_empty(self, topic):
         """Экземпляр метода merged_config"""
@@ -101,26 +88,20 @@ class TestTopic:
     def test_merged_config_false_manual_and_great_custom_config(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test", "test2": "test2"}
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
-        assert topic.merged_config() == {'test': 'test', 'test2': 'test2'}
+        topic.custom_config = {"cleanup.policy": "delete", "segment.bytes": "1073741824"}
+        assert topic.merged_config() == {"cleanup.policy": "delete", "segment.bytes": "1073741824"}
 
     def test_merged_config_true_manual_and_great_custom_config(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test", "test2": "test2"}
-        topic.config = {"test": MagicMock(is_default=False, source=1, value="test")}
-        assert topic.merged_config(allow_manual=True) == {'test': 'test', 'test2': 'test2'}
+        topic.custom_config = {"cleanup.policy": "delete"}
+        assert topic.merged_config(allow_manual=True) == {'cleanup.policy': 'delete', 'segment.bytes': '1073741824'}
 
     def test_merged_config_false_manual_and_great_config(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        topic.config = {
-            "test": MagicMock(is_default=False, source=1, value="test"),
-            "test2": MagicMock(is_default=False, source=1, value="test2"),
-        }
-        assert topic.merged_config() == {'test': 'test'}
+        topic.custom_config = {"cleanup.policy": "delete", "flush.ms": "1000000"}
+        assert topic.merged_config() == {'cleanup.policy': 'delete', "flush.ms": "1000000"}
 
     def test_merged_config_true_manual_and_great_config(self, topic):
         """Экземпляр метода merged_config"""
