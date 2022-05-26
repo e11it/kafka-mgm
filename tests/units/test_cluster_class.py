@@ -30,14 +30,12 @@ class TestCluster:
     def test_delete_topics(self, cluster):
         """Экземпляр метода _delete_topics"""
 
-        cluster.sr_client.subjects = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         cluster._delete_topics([TEST_TOPIC_NAME])
         assert cluster.admin_client.delete_topics.call_count == 1
 
     def test_delete_invalid_topics(self, cluster):
         """Экземпляр метода delete_invalid_topics"""
 
-        cluster.sr_client.subjects = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         cluster._delete_invalid_topics = True
         cluster.delete_invalid_topics()
         assert cluster.admin_client.delete_topics.call_count == 1
@@ -45,14 +43,21 @@ class TestCluster:
     def test_delete_invalid_topics_false(self, cluster):
         """Экземпляр метода delete_invalid_topics"""
 
-        cluster.sr_client.subjects = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
         cluster._delete_invalid_topics = False
+        cluster.delete_invalid_topics()
+        assert cluster.admin_client.delete_topics.call_count == 0
+
+    def test_delete_empty_topics_false(self, cluster):
+        """Экземпляр метода delete_empty_topics"""
+
+        cluster._delete_empty_topics = False
         cluster.delete_invalid_topics()
         assert cluster.admin_client.delete_topics.call_count == 0
 
     def test_delete_empty_topics(self, cluster):
         """Экземпляр метода delete_empty_topics"""
 
+        cluster._delete_empty_topics = True
         cluster.delete_empty_topics()
         assert cluster.admin_client.delete_topics.call_count == 0
         assert cluster.sr_client.admin_client.delete_subject.call_count == 0
@@ -60,6 +65,7 @@ class TestCluster:
     def test_delete_empty_topics_exist(self, cluster):
         """Экземпляр метода delete_empty_topics"""
 
+        cluster._delete_empty_topics = True
         cluster.consumer.get_watermark_offsets.return_value = (1, 1,)
         cluster.delete_empty_topics()
         assert cluster.admin_client.delete_topics.call_count == 1
@@ -68,6 +74,7 @@ class TestCluster:
     def test_delete_empty_topics_error_consumer(self, cluster):
         """Экземпляр метода delete_empty_topics"""
 
+        cluster._delete_empty_topics = True
         cluster.consumer = None
         with pytest.raises(KafkaException):
             cluster.delete_empty_topics()
@@ -75,6 +82,7 @@ class TestCluster:
     def test_delete_empty_topics_error_sr(self, cluster):
         """Экземпляр метода delete_empty_topics"""
 
+        cluster._delete_empty_topics = True
         cluster.sr_client = None
         with pytest.raises(SchemaRegistryError):
             cluster.delete_empty_topics()
@@ -88,6 +96,8 @@ class TestCluster:
     def test_apply_cluster_configs_not_resource(self, cluster):
         """Экземпляр метода apply_cluster_configs"""
 
-        cluster.topics.topics[TEST_TOPIC_NAME].custom_config = {"test": "test"}
+        cluster.topics.topics[TEST_TOPIC_NAME].custom_config = {
+            "segment.bytes": "1073741824", "cleanup.policy": "compact"
+        }
         cluster.apply_cluster_configs()
         assert cluster.admin_client.alter_configs.call_count == 0

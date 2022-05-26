@@ -1,9 +1,5 @@
-from unittest.mock import MagicMock
-
 import pytest
-
-from tests.conftest import TEST_CONFIG
-from confluent_kafka.admin import ConfigEntry,ConfigSource
+from confluent_kafka.admin import ConfigEntry, ConfigSource
 
 
 class TestTopic:
@@ -25,25 +21,22 @@ class TestTopic:
     def test_config(self, topic):
         """Экземпляр метода config"""
 
-        topic.config = TEST_CONFIG
-        assert list(topic.config.keys()) == ["test"]
-        topic.config = {"wrong": "wrong"}
-        assert list(topic.config.keys()) == ["test"]
+        assert list(topic.config.keys()) == ["compression.type", "retention.bytes", "segment.bytes", "cleanup.policy"]
+        topic.config = {
+            "flush.ms": ConfigEntry("flush.ms", "1000000",
+                                    is_default=True, source=ConfigSource.DEFAULT_CONFIG.value)
+        }
+        assert list(topic.config.keys()) == ["compression.type", "retention.bytes", "segment.bytes", "cleanup.policy"]
 
-    def test_need_cfg_update_false(self, topic, mocker):
+    def test_need_cfg_update_false(self, topic):
         """Экземпляр метода need_cfg_update"""
 
-        mocker.patch("kafka_mgm.Topic.merged_config", return_value={"test": "test"})
-
-        topic.config = TEST_CONFIG
         assert topic.need_cfg_update() is False
 
     def test_need_cfg_update_true(self, topic, mocker):
         """Экземпляр метода need_cfg_update"""
 
         mocker.patch("kafka_mgm.Topic.merged_config", return_value={"default": "default"})
-
-        topic.config = TEST_CONFIG
         assert topic.need_cfg_update() is True
 
     def test_custom_config(self, topic):
@@ -54,102 +47,121 @@ class TestTopic:
         topic.custom_config = {"segment.bytes": "1024"}
         assert topic.custom_config == {"cleanup.policy": "delete", "segment.bytes": "1024"}
 
-    def test_merged_config_empty(self, topic):
+    def test_merged_config_empty_custom_config_true(self, topic):
         """Экземпляр метода merged_config"""
 
+        topic.custom_config = {}
         assert topic.merged_config(allow_manual=True) is None
 
-    def test_merged_config_empty_delta(self, topic):
+    def test_merged_config_empty_custom_config_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        topic.config = TEST_CONFIG
+        topic.custom_config = {}
+        assert topic.merged_config(allow_manual=False) == {}
+
+    def test_merged_config_old_values_true(self, topic):
+        """Экземпляр метода merged_config"""
+
+        topic.custom_config = {"segment.bytes": "1073741824", "cleanup.policy": "compact"}  # старые значения
         assert topic.merged_config(allow_manual=True) is None
 
-    def test_merged_config_exist_delta(self, topic):
+    def test_merged_config_old_values_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        assert topic.merged_config(allow_manual=True) == {"test": "test"}
+        topic.custom_config = {"segment.bytes": "1073741824", "cleanup.policy": "compact"}  # старые значения
+        assert topic.merged_config(allow_manual=False) is None
 
-    def test_merged_config_false_manual(self, topic):
+    def test_merged_config_not_full_values_true(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        topic.config = TEST_CONFIG
-        assert topic.merged_config() is None
+        topic.custom_config = {"segment.bytes": "1073741824"}  # старые неполные значения
+        assert topic.merged_config(allow_manual=True) is None
 
-    def test_merged_config_false_manual_and_exist_delta(self, topic):
+    def test_merged_config_not_full_values_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        assert topic.merged_config() == {"test": "test"}
+        topic.custom_config = {"segment.bytes": "1073741824"}  # старые неполные значения
+        assert topic.merged_config(allow_manual=False) == {"segment.bytes": "1073741824"}
 
-    def test_merged_config_false_manual_and_great_custom_config(self, topic):
+    def test_merged_config_new_value_true(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"cleanup.policy": "delete", "segment.bytes": "1073741824"}
-        assert topic.merged_config() == {"cleanup.policy": "delete", "segment.bytes": "1073741824"}
+        topic.custom_config = {"segment.bytes": "1"}  # новое значение у segment.bytes
+        assert topic.merged_config(allow_manual=True) == {"segment.bytes": "1", 'cleanup.policy': 'compact'}
 
-    def test_merged_config_true_manual_and_great_custom_config(self, topic):
+    def test_merged_config_new_value_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"cleanup.policy": "delete"}
-        assert topic.merged_config(allow_manual=True) == {'cleanup.policy': 'delete', 'segment.bytes': '1073741824'}
+        topic.custom_config = {"segment.bytes": "1"}  # новое значение у segment.bytes
+        assert topic.merged_config(allow_manual=False) == {"segment.bytes": "1"}
 
-    def test_merged_config_false_manual_and_great_config(self, topic):
+    def test_merged_config_new_and_old_values_true(self, topic):
         """Экземпляр метода merged_config"""
 
+        # новое значение у segment.bytes
+        # старое значение у cleanup.policy
+        topic.custom_config = {"segment.bytes": "1", 'cleanup.policy': 'compact'}
+        assert topic.merged_config(allow_manual=True) == {"segment.bytes": "1", 'cleanup.policy': 'compact'}
+
+    def test_merged_config_new_and_old_values_false(self, topic):
+        """Экземпляр метода merged_config"""
+
+        # новое значение у segment.bytes
+        # старое значение у cleanup.policy
+        topic.custom_config = {"segment.bytes": "1", 'cleanup.policy': 'compact'}
+        assert topic.merged_config(allow_manual=False) == {"segment.bytes": "1", 'cleanup.policy': 'compact'}
+
+    def test_merged_config_new_param_true(self, topic):
+        """Экземпляр метода merged_config"""
+
+        # новый параметр flush.ms
+        topic.custom_config = {"flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=True) == {
+            'cleanup.policy': 'compact', "flush.ms": "1000000", "segment.bytes": "1073741824"
+        }
+
+    def test_merged_config_new_param_false(self, topic):
+        """Экземпляр метода merged_config"""
+
+        # новый параметр flush.ms
+        topic.custom_config = {"flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=False) == {"flush.ms": "1000000"}
+
+    def test_merged_config_new_param_and_new_value_true(self, topic):
+        """Экземпляр метода merged_config"""
+
+        # новый параметр flush.ms
+        # новое значение у cleanup.policy
         topic.custom_config = {"cleanup.policy": "delete", "flush.ms": "1000000"}
-        assert topic.merged_config() == {'cleanup.policy': 'delete', "flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=True) == {
+            'cleanup.policy': 'delete', "flush.ms": "1000000", "segment.bytes": "1073741824"
+        }
 
-    def test_merged_config_true_manual_and_great_config(self, topic):
+    def test_merged_config_new_param_and_new_value_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test"}
-        topic.config = {
-            "test": MagicMock(is_default=False, source=1, value="test"),
-            "test2": MagicMock(is_default=False, source=1, value="test2"),
-        }
-        assert topic.merged_config(allow_manual=True) is None
+        # новый параметр flush.ms
+        # новое значение у cleanup.policy
+        topic.custom_config = {"cleanup.policy": "delete", "flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=False) == {'cleanup.policy': 'delete', "flush.ms": "1000000"}
 
-    def test_merged_config_false_manual_and_both_configs_have_differ(self, topic):
+    def test_merged_config_new_param_and_old_value_true(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test", "test2": "test2"}
-        topic.config = {
-            "test": MagicMock(is_default=False, source=1, value="test"),
-            "test3": MagicMock(is_default=False, source=1, value="test3"),
+        # новый параметр flush.ms
+        # старое значение у cleanup.policy
+        topic.custom_config = {"cleanup.policy": "compact", "flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=True) == {
+            'cleanup.policy': 'compact', "flush.ms": "1000000", "segment.bytes": "1073741824"
         }
-        assert topic.merged_config() == {'test': 'test', 'test2': 'test2'}
 
-    def test_merged_config_true_manual_and_both_configs_have_differ(self, topic):
+    def test_merged_config_new_param_and_old_value_false(self, topic):
         """Экземпляр метода merged_config"""
 
-        topic.custom_config = {"test": "test", "test2": "test2"}
-        topic.config = {
-            "test": MagicMock(is_default=False, source=1, value="test"),
-            "test3": MagicMock(is_default=False, source=1, value="test3"),
-        }
-        assert topic.merged_config(allow_manual=True) == {'test': 'test', 'test2': 'test2', 'test3': 'test3'}
-
-    def test_merged_config_false_manual_and_both_configs_differ(self, topic):
-        """Экземпляр метода merged_config"""
-
-        topic.custom_config = {"test": "test"}
-        topic.config = {
-            "test1": MagicMock(is_default=False, source=1, value="test1"),
-        }
-        assert topic.merged_config() == {'test': 'test'}
-
-    def test_merged_config_true_manual_and_both_configs_differ(self, topic):
-        """Экземпляр метода merged_config"""
-
-        topic.custom_config = {"test": "test"}
-        topic.config = {
-            "test1": MagicMock(is_default=False, source=1, value="test1"),
-        }
-        assert topic.merged_config(allow_manual=True) == {'test': 'test', 'test1': 'test1'}
+        # новый параметр flush.ms
+        # старое значение у cleanup.policy
+        topic.custom_config = {"cleanup.policy": "compact", "flush.ms": "1000000"}
+        assert topic.merged_config(allow_manual=False) == {"cleanup.policy": "compact", "flush.ms": "1000000"}
 
     def test_custom(self, topic):
         """Экземпляр метода custom"""

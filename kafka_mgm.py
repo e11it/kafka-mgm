@@ -96,8 +96,7 @@ class Cluster:
             raise ValueError('Cluster connection "config" is required')
 
         self.config: Dict = obj["config"]
-        if self.config.get('group.id') is None:
-            self.config['group.id'] = 'group-id'
+        self.config.setdefault('group.id', 'group-id')
 
         self.admin_client: AdminClient = self.create_admin_client(self.config)
         self.consumer: Consumer = self.create_consumer(self.config)
@@ -309,45 +308,49 @@ class Topic:
                 )
             self._custom_config[k] = v
 
-    def merged_config(self, allow_manual: bool = False) -> Optional[Dict]:
-        # Функция возвращает конфиг/отличающиеся параметры между текущим и что ожидалось
-        # allow_manual - разрешает наличие параметров, не описанных в конфигурации
-        # Return: None - если нечего применять или новый конфиг
+    @property
+    def config_delta(self):
+        return {
+            k: v
+            for k, v in self._custom_config.items()
+            if k in self._config and str(self._config[k].value) == str(v)
+        }
 
-        if len(self._custom_config) == 0 and allow_manual:
-            return None
-
-        # Получаем настройки различающиеся с описанными
-        config_delta = {}
-        for k, v in self._custom_config.items():
-            if k in self._config and str(self._config[k].value) == str(v):
-                continue
-            config_delta[k] = v
-
-        if len(config_delta) == 0 and allow_manual:
-            return None
-
-        """кастомные значения, установленные руками"""
-        restore_default = False
-        for k, entry in [
-            (k, v)
+    @property
+    def dynamic_config(self):
+        return {
+            k: v.value
             for k, v in self._config.items()
             if not v.is_default and v.source == ConfigSource.DYNAMIC_TOPIC_CONFIG.value
-        ]:
-            if k not in config_delta:
-                if allow_manual:
-                    logger.warning(
-                        "[manual] topic {} {}: {}".format(self.name, k, entry.value)
-                    )
-                    config_delta[k] = entry.value
-                elif k not in self._custom_config:
-                    restore_default = True
+        }
 
-        if len(config_delta) == 0 and not restore_default:
+    def merged_config(self, allow_manual: bool = False) -> Optional[Dict]:
+        """Функция возвращает новый конфиг из переданного custom_config.
+        Если установлен флаг allow_manual, добавляются параметры из config.
+        custom_config должен полностью перезаписать config.
+
+        Args:
+            allow_manual: Если True, то к custom_config добавляются параметры из custom.
+            Если False, то применяются только переданные параметры custom_config. В этом случае
+            все параметры, которых нет в custom_config, но есть в config, очистятся.
+
+        Returns:
+            None - если нечего изменять.
+            Новый конфиг - если переданы новые настройки.
+        """
+
+        if not allow_manual:
+            if self._custom_config == self.dynamic_config:
+                return None
+            return self._custom_config
+
+        if not self._custom_config or self.config_delta == self._custom_config:
             return None
 
-        config_delta.update(self._custom_config)
-        return config_delta
+        # Получаем настройки, которые были выставлены не по умолчанию
+        merged_config = self.dynamic_config
+        merged_config.update(self._custom_config)
+        return merged_config
 
     def custom(self, obj: Dict):
         if obj is None:

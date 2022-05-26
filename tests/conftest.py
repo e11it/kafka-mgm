@@ -10,26 +10,27 @@ TEST_SR_SUBJECTS = [f"{TEST_TOPIC_NAME}-key", f"{TEST_TOPIC_NAME}-value"]
 TEST_PARTITION_ID = 0
 TEST_MASK = r"test\."
 TEST_VERSION = "version_test"
-TEST_CONFIG = {"test": MagicMock(is_default=False, source=1, value="test")}
 TEST_OBJ = {
-    "config": TEST_CONFIG,
+    "config": {"test": "test"},
     "dry_run": False,
     "delete_invalid_topics": False,
+    "delete_empty_topics": False,
     "validate_regexp": TEST_MASK,
 }
 TEST_DEFAULT_CONFIG = {
-            # Значение по дефолту
-            "compression.type": ConfigEntry("compression.type","producer",
-                                         is_default=True,source=ConfigSource.DEFAULT_CONFIG.value),
-            # Измененная настройка на брокере
-            "retention.bytes": ConfigEntry("retention.bytes","3221225472",
-                                          is_default=False, source=ConfigSource.STATIC_BROKER_CONFIG.value),
-            # Измененные значения для топика
-            "segment.bytes": ConfigEntry("segment.bytes","1073741824",
-                                         is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
-            "cleanup.policy": ConfigEntry("cleanup.policy","compact",
-                                          is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value)
+    # Значение по дефолту
+    "compression.type": ConfigEntry("compression.type", "producer",
+                                    is_default=True, source=ConfigSource.DEFAULT_CONFIG.value),
+    # Измененная настройка на брокере
+    "retention.bytes": ConfigEntry("retention.bytes", "3221225472",
+                                   is_default=False, source=ConfigSource.STATIC_BROKER_CONFIG.value),
+    # Измененные значения для топика
+    "segment.bytes": ConfigEntry("segment.bytes", "1073741824",
+                                 is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value),
+    "cleanup.policy": ConfigEntry("cleanup.policy", "compact",
+                                  is_default=False, source=ConfigSource.DYNAMIC_TOPIC_CONFIG.value)
 }
+
 
 @pytest.fixture(scope="function")
 def mask_rule():
@@ -93,7 +94,7 @@ def topics_with_config(metadata):
 
     topics_with_config = Topics(metadata)
     for topic in topics_with_config.topics.values():
-        topic.config = TEST_CONFIG
+        topic.config = TEST_DEFAULT_CONFIG
     return topics_with_config
 
 
@@ -111,7 +112,7 @@ def cluster(mocker, sr, mask_rule, metadata, consumer, topics_with_config):
     """Экземпляр класса Cluster"""
 
     value_mock = MagicMock()
-    value_mock.result.return_value = TEST_CONFIG
+    value_mock.result.return_value = TEST_DEFAULT_CONFIG
     key_mock = MagicMock()
     key_mock.name = TEST_TOPIC_NAME
 
