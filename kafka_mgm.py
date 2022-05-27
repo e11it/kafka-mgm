@@ -153,23 +153,23 @@ class Cluster:
                 config = f.result()
                 topics.set_config_for_topic(res.name, config)
             except KafkaException as e:
-                logger.error("Failed to describe {}: {}".format(res, e))
+                logger.fatal("Failed to describe {}: {}".format(res, e))
 
         return topics
 
     def _delete_topics(self, topics: List[str]):
         if self.dry_run:
             for topic in topics:
-                logger.info("[dry run: soft delete topic] {}".format(topic))
+                logger.info(f"[dry run: soft delete topic] {topic}")
             return
 
         _obj = self.admin_client.delete_topics(topics, operation_timeout=60)
         for topic, f in _obj.items():
             try:
                 f.result()  # The result itself is None
-                logger.info("[deleted] {}".format(topic))
+                logger.info(f"[deleted] {topic}")
             except Exception as e:
-                logger.error("Failed to delete topic {}: {}".format(topic, e))
+                logger.fatal(f"Failed to delete topic {topic}: {e}")
 
     def delete_invalid_topics(self):
         if not self._delete_invalid_topics:
@@ -365,15 +365,19 @@ class Topic:
     def empty_topic(self, consumer: Consumer) -> bool:
         message_sum = 0
 
-        for partition in range(self.partition_count):
-            tp = TopicPartition(self.name, partition)
-            offsets = consumer.get_watermark_offsets(tp)
-            low_offset, high_offset = offsets
-            diff = high_offset - low_offset
-            message_sum += diff
+        try:
+            for partition in range(self.partition_count):
+                tp = TopicPartition(self.name, partition)
+                offsets = consumer.get_watermark_offsets(tp)
+                low_offset, high_offset = offsets
+                diff = high_offset - low_offset
+                message_sum += diff
 
-            if not message_sum == 0:
-                return False
+                if not message_sum == 0:
+                    return False
+        except Exception as e:
+                logger.fatal(f"Failed to get watermark. Topic: {self.name}, partition{partition}. Exception: {e}")
+
         return True
 
 
