@@ -344,12 +344,14 @@ class Topic:
                 return None
             return self._custom_config
 
-        if not self._custom_config or self.config_delta == self._custom_config:
+        if not self._custom_config:
             return None
 
         # Получаем настройки, которые были выставлены не по умолчанию
         merged_config = self.dynamic_config
         merged_config.update(self._custom_config)
+        if merged_config == self.dynamic_config:
+            return None
         return merged_config
 
     def custom(self, obj: Dict):
