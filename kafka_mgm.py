@@ -410,7 +410,7 @@ class Topics:
         return [
             topic.name
             for topic in iter(self.topics.values())
-            if topic.empty_topic(consumer)
+            if topic.is_valid_name and topic.empty_topic(consumer)
         ]
 
     def set_config_for_topic(self, name: str, config: Dict):
