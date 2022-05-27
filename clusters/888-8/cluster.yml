@@ -1,5 +1,9 @@
 ---
 config:
+  group.id: group-id
+  enable.auto.commit: false
+  enable.auto.offset.store: false
+  auto.offset.reset: earliest
   bootstrap.servers: some-brokers-name.com:9093
   security.protocol: ssl
   ssl.ca.location: !ENV ${SSL_CA_LOCATION:ca.pem}
