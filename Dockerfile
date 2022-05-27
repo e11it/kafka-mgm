@@ -21,7 +21,7 @@ COPY --from=builder /app/wheels /wheels
 COPY --from=builder /app/requirements.txt .
 
 RUN pip install --no-cache /wheels/*
-COPY kafka-mgm.py /app/
+COPY kafka_mgm.py /app/
 # We expected kafka clusters config to be in /app/clusters
 
-CMD [ "python", "./kafka-mgm.py"]
+CMD [ "python", "./kafka_mgm.py"]
