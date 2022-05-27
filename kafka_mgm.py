@@ -272,7 +272,7 @@ class Topic:
                     not v.is_default
                     and v.source == ConfigSource.DYNAMIC_TOPIC_CONFIG.value
                 ):
-                    logger.debug("loaded cfg> {} = {}".format(k, v.value))
+                    logger.debug(f"\tcfg> {k} = {v.value}")
 
     def need_cfg_update(self) -> bool:
         for k, v in self.merged_config().items():
