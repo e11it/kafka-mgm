@@ -210,7 +210,6 @@ class Cluster:
         topics = self.topics.get_valid_topics
         for topic in topics:
             resource = topic.resource_with_config()
-            print(resource)
             if resource is None:
                 continue
 
@@ -306,7 +305,7 @@ class Topic:
                         v,
                     )
                 )
-            self._custom_config[k] = v
+            self._custom_config[k] = str(v)
 
     @property
     def config_delta(self):
