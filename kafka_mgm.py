@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 class MaskRule:
     def __init__(self, obj: Dict):
         if "mask" not in obj:
-            raise ValueError('Key "mask" is not present in {}'.format(obj))
+            raise ValueError(f"Key 'mask' is not present in {obj}")
         self.mask_str: str = obj["mask"]
         self.mask: Pattern = re.compile(self.mask_str)
         self.config: Dict = self._get_config(obj)
@@ -53,7 +53,7 @@ class MaskRule:
         for k, v in obj.items():
             if k == "mask":
                 continue
-            logger.debug("Set mask={} config={}".format(obj.get("mask"), k))
+            logger.debug(f"Set mask={obj.get('mask')} config={k}")
             config[k] = v
         return config
 
@@ -66,9 +66,7 @@ class SR:
         self.conn_config: Dict = config
         self.admin_client: SchemaRegistryClient = self.get_sr_client(config)
         self.subjects: List[str] = self.admin_client.get_subjects()
-        logger.debug(
-            "loaded {} schema subjects from schema registry".format(len(self.subjects))
-        )
+        logger.debug(f"loaded {len(self.subjects)} schema subjects from schema registry")
 
     @staticmethod
     def get_sr_client(config: Dict) -> SchemaRegistryClient:
@@ -114,7 +112,7 @@ class Cluster:
 
         self.masks: List = []
         for mask in obj.get("masks_settings", []):
-            logger.debug("=+= {}".format(mask))
+            logger.debug(f"=+= {mask}")
             self.masks.append(MaskRule(mask))
 
         self.topics: Topics = self.load_existing_topics()
@@ -132,7 +130,7 @@ class Cluster:
             raise SchemaRegistryError(
                 http_status_code=404,
                 error_code=404,
-                error_message="Schema Registry is not found: {}".format(self.sr_client),
+                error_message=f"Schema Registry is not found: {self.sr_client}",
             )
         subjects = self.sr_client.subjects
         for subject in subjects:
@@ -141,7 +139,7 @@ class Cluster:
     def load_existing_topics(self):
         metadata = self.admin_client.list_topics(timeout=60)
         topics = Topics(metadata)
-        logger.debug("Loaded metadata for {} topics".format(len(metadata.topics)))
+        logger.debug(f"Loaded metadata for {len(metadata.topics)} topics")
 
         if self.validate_regexp is not None:
             topics.validate_names(self.validate_regexp)
@@ -153,7 +151,7 @@ class Cluster:
                 config = f.result()
                 topics.set_config_for_topic(res.name, config)
             except KafkaException as e:
-                logger.fatal("Failed to describe {}: {}".format(res, e))
+                logger.fatal(f"Failed to describe {res}: {e}")
 
         return topics
 
@@ -185,13 +183,13 @@ class Cluster:
 
         if self.consumer is None:
             raise KafkaException(
-                "Kafka consumer is not found: {}".format(self.consumer)
+                f"Kafka consumer is not found: {self.consumer}"
             )
         if self.sr_client is None:
             raise SchemaRegistryError(
                 http_status_code=404,
                 error_code=404,
-                error_message="Schema Registry is not found: {}".format(self.sr_client),
+                error_message=f"Schema Registry is not found: {self.sr_client}",
             )
 
         empty_topics = self.topics.get_empty_topics(self.consumer)
@@ -213,11 +211,7 @@ class Cluster:
             if resource is None:
                 continue
 
-            logger.debug(
-                "Will be updated: {} with {}".format(
-                    topic.name, resource.set_config_dict
-                )
-            )
+            logger.debug(f"Will be updated: {topic.name} with {resource.set_config_dict}")
             if self.dry_run:
                 continue
 
@@ -226,7 +220,7 @@ class Cluster:
             for res, f in obj.items():
                 try:
                     f.result()  # empty, but raises exception on failure
-                    logger.info("{} configuration successfully altered".format(res))
+                    logger.info(f"{res} configuration successfully altered")
                 except Exception as e:
                     logger.error(e)
 
@@ -264,7 +258,7 @@ class Topic:
 
         self._config = copy.deepcopy(config)
         if logger.isEnabledFor(level=logging.DEBUG):
-            logger.debug("Topic: {}".format(self.name))
+            logger.debug(f"Topic: {self.name}")
             for k, v in self._config.items():
                 # Выводим измененные параметры для топика
                 if (
@@ -297,14 +291,7 @@ class Topic:
 
         for k, v in config.items():
             if k in self._custom_config and logger.isEnabledFor(level=logging.DEBUG):
-                logger.debug(
-                    "Topic: {}. Overwrite setting {}: {} -> {}".format(
-                        self.name,
-                        k,
-                        self._custom_config[k],
-                        v,
-                    )
-                )
+                logger.debug(f"Topic: {self.name}. Overwrite setting {k}: {self._custom_config[k]} -> {v}")
             self._custom_config[k] = str(v)
 
     @property
@@ -434,7 +421,7 @@ class Topics:
             if regexp.match(name):
                 self.topics[name].is_valid_name = True
             else:
-                logger.warning("Invalid topic name: {}".format(name))
+                logger.warning(f"Invalid topic name: {name}")
 
 
 if __name__ == "__main__":
@@ -443,7 +430,7 @@ if __name__ == "__main__":
     elif len(sys.argv) == 2:
         cluster_name = sys.argv[1]
     else:
-        logging.error("Usage: {} <cluster_id>".format(sys.argv[0]))
+        logging.error(f"Usage: {sys.argv[0]} <cluster_id>")
         logging.error("\tor set CLUSTER_NAME env variable")
         sys.exit(1)
 
