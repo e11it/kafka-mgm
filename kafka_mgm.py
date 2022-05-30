@@ -33,11 +33,11 @@ load_dotenv()
 
 format_def = logging.Formatter("%(asctime)s %(name)s %(levelname)s:%(message)s")
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="[%(asctime)s] p%(process)s {%(pathname)s:%(lineno)d} %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
-
+logger.setLevel(logging.DEBUG)
 
 class MaskRule:
     def __init__(self, obj: Dict):
