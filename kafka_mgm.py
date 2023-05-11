@@ -160,6 +160,8 @@ class Cluster:
             for topic in topics:
                 logger.info(f"[dry run: soft delete topic] {topic}")
             return
+        if len(topics) == 0:
+            return
 
         _obj = self.admin_client.delete_topics(topics, operation_timeout=60)
         for topic, f in _obj.items():
